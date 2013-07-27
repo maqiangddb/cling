@@ -21,6 +21,7 @@
             <plugin>
                 <artifactId>maven-surefire-plugin</artifactId>
                 <configuration>
+					<skip>true</skip>
                     <suiteXmlFiles>
                         <suiteXmlFile>src/test/AllTests.tng.xml</suiteXmlFile>
                     </suiteXmlFiles>

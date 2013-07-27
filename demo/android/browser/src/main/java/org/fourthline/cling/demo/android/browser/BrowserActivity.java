@@ -24,19 +24,29 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.Bundle;
 import android.os.IBinder;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.ArrayAdapter;
+import android.widget.EditText;
 import android.widget.ListView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import com.some.Util;
+import com.wireme.activity.MainActivity;
+
 import org.fourthline.cling.android.AndroidUpnpService;
 import org.fourthline.cling.android.AndroidUpnpServiceImpl;
+import org.fourthline.cling.model.meta.Action;
 import org.fourthline.cling.model.meta.Device;
 import org.fourthline.cling.model.meta.LocalDevice;
 import org.fourthline.cling.model.meta.RemoteDevice;
+import org.fourthline.cling.model.meta.RemoteService;
 import org.fourthline.cling.model.meta.Service;
+import org.fourthline.cling.protocol.RetrieveRemoteDescriptors;
 import org.fourthline.cling.registry.DefaultRegistryListener;
 import org.fourthline.cling.registry.Registry;
 import org.fourthline.cling.transport.Router;
@@ -62,20 +72,23 @@ public class BrowserActivity extends ListActivity {
     private ServiceConnection serviceConnection = new ServiceConnection() {
 
         public void onServiceConnected(ComponentName className, IBinder service) {
+            Util.LOGI("onServiceConnected===");
             upnpService = (AndroidUpnpService) service;
 
             // Clear the list
-            listAdapter.clear();
+            //listAdapter.clear();
 
             // Get ready for future device advertisements
             upnpService.getRegistry().addListener(registryListener);
 
             // Now add all devices to the list we already know about
             for (Device device : upnpService.getRegistry().getDevices()) {
-                registryListener.deviceAdded(device);
+                Util.LOGI("there is device:"+device.getDetails().getFriendlyName());
+            //    registryListener.deviceAdded(device);
             }
 
             // Search asynchronously for all devices, they will respond soon
+            Util.LOGI("UpnpService--->searching....=================");
             upnpService.getControlPoint().search();
         }
 
@@ -93,7 +106,9 @@ public class BrowserActivity extends ListActivity {
             new org.seamless.android.FixedAndroidLogHandler()
         );
         // Now you can enable logging as needed for various categories of Cling:
-        // Logger.getLogger("org.fourthline.cling").setLevel(Level.FINEST);
+        Logger.getLogger("org.fourthline.cling").setLevel(Level.FINEST);
+        Util.LOGI("TAG==="+RetrieveRemoteDescriptors.class.getName());
+        Logger.getLogger(RetrieveRemoteDescriptors.class.getName()).setLevel(Level.FINEST);
 
         listAdapter = new ArrayAdapter<DeviceDisplay>(this, android.R.layout.simple_list_item_1);
         setListAdapter(listAdapter);
@@ -118,12 +133,24 @@ public class BrowserActivity extends ListActivity {
     // DOC:SERVICE_BINDING
 
     // DOC:MENU
+    private static final int SEARCH_LAN = 0;
+    private static final int SWITCH_ROUTER = 1;
+    private static final  int TOGGLE_DEBUG = 2;
+    private static final int ADD_DEVICE = 3;
+    private static final int MEDIA_ACTIVITY = 4;
+    private static final int ROUTER_LOG = 5;
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         menu.add(0, 0, 0, R.string.searchLAN).setIcon(android.R.drawable.ic_menu_search);
         // DOC:OPTIONAL
         menu.add(0, 1, 0, R.string.switchRouter).setIcon(android.R.drawable.ic_menu_revert);
         menu.add(0, 2, 0, R.string.toggleDebugLogging).setIcon(android.R.drawable.ic_menu_info_details);
+        //
+        menu.add(0,3,0,R.string.add_device);
+        menu.add(0,4,0,R.string.media_activity);
+
+        menu.add(0,5,0,R.string.router_log);
+        //
         // DOC:OPTIONAL
         return true;
     }
@@ -131,7 +158,7 @@ public class BrowserActivity extends ListActivity {
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
-            case 0:
+            case SEARCH_LAN:
                 if (upnpService == null)
                     break;
                 Toast.makeText(this, R.string.searchingLAN, Toast.LENGTH_SHORT).show();
@@ -139,7 +166,7 @@ public class BrowserActivity extends ListActivity {
                 upnpService.getControlPoint().search();
                 break;
             // DOC:OPTIONAL
-            case 1:
+            case SWITCH_ROUTER:
                 if (upnpService != null) {
                     Router router = upnpService.get().getRouter();
                     try {
@@ -156,19 +183,78 @@ public class BrowserActivity extends ListActivity {
                     }
                 }
                 break;
-            case 2:
+            case TOGGLE_DEBUG:
                 Logger logger = Logger.getLogger("org.fourthline.cling");
-                if (logger.getLevel() != null && !logger.getLevel().equals(Level.INFO)) {
-                    Toast.makeText(this, R.string.disablingDebugLogging, Toast.LENGTH_SHORT).show();
-                    logger.setLevel(Level.INFO);
-                } else {
-                    Toast.makeText(this, R.string.enablingDebugLogging, Toast.LENGTH_SHORT).show();
-                    logger.setLevel(Level.FINEST);
-                }
+                switchLog(logger);
+                break;
+
+            case ADD_DEVICE:
+                showAddDeviceDlg();
+                break;
+            case MEDIA_ACTIVITY:
+                startActivity(new Intent(this, MainActivity.class));
+                break;
+            case ROUTER_LOG:
+                Logger log = Logger.getLogger(Router.class.getName());
+                switchLog(log);
                 break;
             // DOC:OPTIONAL
         }
         return false;
+    }
+
+    private void switchLog(Logger logger) {
+        if (logger.getLevel() != null && !logger.getLevel().equals(Level.INFO)) {
+            Toast.makeText(this, R.string.disablingDebugLogging, Toast.LENGTH_SHORT).show();
+            logger.setLevel(Level.INFO);
+        } else {
+            Toast.makeText(this, R.string.enablingDebugLogging, Toast.LENGTH_SHORT).show();
+            logger.setLevel(Level.FINEST);
+        }
+    }
+
+    private void showAddDeviceDlg() {
+        Util.LOGI("showAddDeviceDlg====");
+        AlertDialog.Builder builder = new AlertDialog.Builder(this);
+        EditText view = new EditText(this);
+        view.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence charSequence, int i, int i2, int i3) {
+                Util.LOGI("beforeTextChanged===text:"+charSequence);
+            }
+
+            @Override
+            public void onTextChanged(CharSequence charSequence, int i, int i2, int i3) {
+                Util.LOGI("onTextChanged=====text:"+charSequence);
+                _deviceName = charSequence.toString();
+            }
+
+            @Override
+            public void afterTextChanged(Editable editable) {
+                Util.LOGI("afterTextChanged====");
+            }
+        });
+        builder.setTitle(R.string.add_device_dlg_title)
+                .setView(view)
+                .setPositiveButton(R.string.add_device_dlg_p_btn, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        addLocalDevice(_deviceName);
+                    }
+                })
+                .create()
+                .show();
+
+    }
+
+    private String _deviceName;
+
+    private void addLocalDevice(String friendName) {
+        Util.LOGI("addLocalDevice====Name:" + friendName);
+        //DeviceIdentity identity = new DeviceIdentity(udn,template);
+        //DeviceDetails details = new DeviceDetails(name);
+        //LocalService service ;
+        //LocalDevice device = new LocalDevice(identity,type, details,service);
     }
     // DOC:MENU
 
@@ -196,7 +282,8 @@ public class BrowserActivity extends ListActivity {
         /* Discovery performance optimization for very slow Android devices! */
         @Override
         public void remoteDeviceDiscoveryStarted(Registry registry, RemoteDevice device) {
-            deviceAdded(device);
+            Util.LOGI("remoteDeviceDiscoveryStarted=====device:"+device.getDetails().getFriendlyName());
+            //deviceAdded(device);
         }
 
         @Override
@@ -217,22 +304,35 @@ public class BrowserActivity extends ListActivity {
 
         @Override
         public void remoteDeviceAdded(Registry registry, RemoteDevice device) {
+            Util.LOGI("remoteDeviceAdded=====device:"+device.getDetails().getFriendlyName());
+            RemoteService[] services = device.getRoot().getServices();
+            for (RemoteService service : services) {
+                Util.LOGI("=service:"+service.toString());
+                Action[] actions = service.getActions();
+                for (Action action : actions) {
+                    Util.LOGI("===action:"+action.toString());
+                }
+            }
+
             deviceAdded(device);
         }
 
         @Override
         public void remoteDeviceRemoved(Registry registry, RemoteDevice device) {
+            Util.LOGI("remoteDeviceRemoved====device:"+device.getDetails().getFriendlyName());
             deviceRemoved(device);
         }
 
         @Override
         public void localDeviceAdded(Registry registry, LocalDevice device) {
-            deviceAdded(device);
+            Util.LOGI("localDeviceAdded====device:"+device.getDetails().getFriendlyName());
+            //deviceAdded(device);
         }
 
         @Override
         public void localDeviceRemoved(Registry registry, LocalDevice device) {
-            deviceRemoved(device);
+            Util.LOGI("localDeviceRemoved====device:"+device.getDetails().getFriendlyName());
+            //deviceRemoved(device);
         }
 
         public void deviceAdded(final Device device) {

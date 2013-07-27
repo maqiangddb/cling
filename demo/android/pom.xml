@@ -19,6 +19,7 @@
 	</modules>
 
     <build>
+        <finalName>${project.artifactId}</finalName>
         <pluginManagement>
             <plugins>
                 <plugin>
@@ -38,6 +39,7 @@
                         <nativeLibrariesDirectory>${project.basedir}/src/android/native</nativeLibrariesDirectory>
                         <resourceOverlayDirectory>${project.basedir}/src/android/overlay</resourceOverlayDirectory>
                         <extractDuplicates>true</extractDuplicates>
+
                     </configuration>
                 </plugin>
             </plugins>
@@ -49,6 +51,12 @@
         <dependency>
             <groupId>org.fourthline.cling</groupId>
             <artifactId>cling-core</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.fourthline.cling</groupId>
+            <artifactId>cling-support</artifactId>
             <version>${project.version}</version>
         </dependency>
 

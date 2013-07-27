@@ -8,7 +8,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
     <uses-permission android:name="android.permission.WAKE_LOCK"/>
 
-    <uses-sdk android:targetSdkVersion="15"
+    <uses-sdk android:targetSdkVersion="17"
               android:minSdkVersion="15"/>
 
     <application android:icon="@drawable/appicon"
@@ -20,12 +20,23 @@
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
         </activity>
+        <activity android:name="com.wireme.activity.MainActivity">
+            <!--intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter-->
+        </activity>
 
+        <activity android:name="com.wireme.player.GPlayer"
+                  android:theme="@android:style/Theme.NoTitleBar"
+                  android:configChanges="orientation|keyboardHidden">
+
+        </activity>
+
+        <!-- Or a custom service configuration, also use this class in bindService()!-->
         <service android:name="org.fourthline.cling.android.AndroidUpnpServiceImpl"/>
 
-        <!-- Or a custom service configuration, also use this class in bindService()!
-        <service android:name=".BrowserUpnpService"/>
-        -->
+
 
     </application>
 
